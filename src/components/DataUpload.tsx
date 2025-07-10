@@ -1,57 +1,83 @@
 import { useDataStore } from "../store/dataStore";
 import { read, utils } from "xlsx";
+import { useState } from "react";
 import type { FC } from "react";
-import { InboxOutlined } from "@ant-design/icons";
-import type { UploadProps } from "antd";
-import { message, Upload } from "antd";
+import { Table, message } from "antd";
+import type { DragEvent } from "react";
+import type { ColumnType } from 'antd/es/table';
 
 const DataUpload: FC = () => {
   const setTableData = useDataStore((state) => state.setTableData);
+  const tableData = useDataStore((state) => state.tableData);
+  const [dragActive, setDragActive] = useState(false);
+  const [columns, setColumns] = useState<ColumnType<any>[]>([]);
 
-  const { Dragger } = Upload;
+  // 处理文件拖放
+  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
 
-  const props: UploadProps = {
-    name: "file",
-    multiple: false,
-    accept: ".xlsx, .xls",
-    showUploadList: false,
-    beforeUpload: (file) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
+    const file = e.dataTransfer.files[0];
+    if (!file?.name.match(/\.(xls|xlsx)$/)) {
+      message.error("仅支持Excel文件");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const wb = read(data);
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const jsonData = utils.sheet_to_json(ws);
-        setTableData(jsonData as Record<string, unknown>[]);
-      };
-      reader.readAsArrayBuffer(file);
-      return false;
-    },
-    onChange(info) {
-      const { status } = info.file;
-      if (status !== "uploading") {
-        console.log(info.file, info.fileList);
+        const jsonData: Record<string, unknown>[] = utils.sheet_to_json(ws, { raw: false });
+
+        // 动态生成列
+        const dynamicColumns: ColumnType<any>[] = [];
+        if (jsonData.length > 0) {
+          Object.keys(jsonData[0]).forEach((key) => {
+            dynamicColumns.push({
+              title: key,
+              dataIndex: key,
+              key: key,
+              width: 150,
+              render: (value: unknown) => value?.toString() || '—'
+            });
+          });
+        }
+        setColumns(dynamicColumns);
+
+        // 生成带唯一key的数据
+        const processedData = jsonData.map((item, index) => ({
+          ...item,
+          key: `row-${index}-${Date.now()}`
+        }));
+
+        setTableData(processedData);
+      } catch (error) {
+        message.error('文件解析失败');
       }
-      if (status === "done") {
-        message.success(`${info.file.name} file uploaded successfully.`);
-      } else if (status === "error") {
-        message.error(`${info.file.name} file upload failed.`);
-      }
-    },
-    onDrop(e) {
-      console.log("Dropped files", e.dataTransfer.files);
-    },
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   return (
-    <div className="upload-container">
-      <Dragger {...props}>
-        <p className="ant-upload-drag-icon">
-          <InboxOutlined />
-        </p>
-        <p className="ant-upload-text">Click or drag file to this area to upload</p>
-        <p className="ant-upload-hint">Support for a single or bulk upload. Strictly prohibited from uploading company data or other banned files.</p>
-      </Dragger>
+    <div
+      className={`excel-table ${dragActive ? 'drag-active' : ''}`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragActive(true);
+      }}
+      onDragLeave={() => setDragActive(false)}
+      onDrop={handleDrop}
+    >
+      <Table
+        columns={columns}
+        dataSource={tableData}
+        bordered
+        pagination={false}
+        scroll={{ x: 'max-content', y: 500 }}
+        footer={() => dragActive ? "释放文件上传数据" : "拖放Excel文件到此区域"}
+      />
     </div>
   );
 };

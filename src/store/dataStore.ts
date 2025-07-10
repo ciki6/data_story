@@ -16,6 +16,6 @@ export const useDataStore = create<DataState>((set) => ({
   chartType: "line",
 
   setTab: (tab) => set({ currentTab: tab }),
-  setTableData: () => set((state) => ({ tableData: state.tableData })),
+  setTableData: (data) => set({ tableData: [...data] }),
   setChartType: (type) => set({ chartType: type }),
 }));
