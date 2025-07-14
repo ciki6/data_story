@@ -1,16 +1,33 @@
 import { useDataStore } from "../store/dataStore";
 import { read, utils } from "xlsx";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { FC } from "react";
-import { Table, message } from "antd";
+import { message } from "antd";
 import type { DragEvent } from "react";
-import type { ColumnType } from 'antd/es/table';
+import type { ColumnType } from "./DataTable";
+import DataTable from "./DataTable";
 
 const DataUpload: FC = () => {
   const setTableData = useDataStore((state) => state.setTableData);
   const tableData = useDataStore((state) => state.tableData);
   const [dragActive, setDragActive] = useState(false);
-  const [columns, setColumns] = useState<ColumnType<any>[]>([]);
+  const [columns, setColumns] = useState<ColumnType[]>(() => {
+    return "ABCDEFG".split("").map((char) => ({
+      title: char,
+      dataIndex: char,
+      key: char,
+    }));
+  });
+  const [showDefaultData, setShowDefaultData] = useState(true);
+
+  useEffect(() => {
+    // 生成1-20行数据
+    const defaultData = Array.from({ length: 20 }, (_, i) => ({
+      key: `default-row-${i}`,
+      ...Object.fromEntries(columns.map((col) => [col.key, " "])),
+    }));
+    setTableData(defaultData);
+  }, []);
 
   // 处理文件拖放
   const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
@@ -32,7 +49,7 @@ const DataUpload: FC = () => {
         const jsonData: Record<string, unknown>[] = utils.sheet_to_json(ws, { raw: false });
 
         // 动态生成列
-        const dynamicColumns: ColumnType<any>[] = [];
+        const dynamicColumns: ColumnType[] = [];
         if (jsonData.length > 0) {
           Object.keys(jsonData[0]).forEach((key) => {
             dynamicColumns.push({
@@ -40,7 +57,6 @@ const DataUpload: FC = () => {
               dataIndex: key,
               key: key,
               width: 150,
-              render: (value: unknown) => value?.toString() || '—'
             });
           });
         }
@@ -49,12 +65,12 @@ const DataUpload: FC = () => {
         // 生成带唯一key的数据
         const processedData = jsonData.map((item, index) => ({
           ...item,
-          key: `row-${index}-${Date.now()}`
+          key: `row-${index}-${Date.now()}`,
         }));
-
         setTableData(processedData);
+        setShowDefaultData(false);
       } catch (error) {
-        message.error('文件解析失败');
+        message.error("文件解析失败");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -62,7 +78,7 @@ const DataUpload: FC = () => {
 
   return (
     <div
-      className={`excel-table ${dragActive ? 'drag-active' : ''}`}
+      className={`excel-table ${dragActive ? "drag-active" : ""}`}
       onDragOver={(e) => {
         e.preventDefault();
         setDragActive(true);
@@ -70,13 +86,10 @@ const DataUpload: FC = () => {
       onDragLeave={() => setDragActive(false)}
       onDrop={handleDrop}
     >
-      <Table
+      <DataTable
         columns={columns}
-        dataSource={tableData}
-        bordered
-        pagination={false}
-        scroll={{ x: 'max-content', y: 500 }}
-        footer={() => dragActive ? "释放文件上传数据" : "拖放Excel文件到此区域"}
+        rows={tableData}
+        showDefaultData={showDefaultData}
       />
     </div>
   );
