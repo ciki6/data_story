@@ -1,40 +1,44 @@
 import { useDataStore } from "../store/dataStore";
 import { read, utils } from "xlsx";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import type { FC } from "react";
 import { message } from "antd";
-import type { DragEvent } from "react";
-import type { ColumnType } from "./DataTable";
 import DataTable from "./DataTable";
 
 const DataUpload: FC = () => {
   const setTableData = useDataStore((state) => state.setTableData);
   const tableData = useDataStore((state) => state.tableData);
-  const [dragActive, setDragActive] = useState(false);
-  const [columns, setColumns] = useState<ColumnType[]>(() => {
-    return "ABCDEFG".split("").map((char) => ({
-      title: char,
-      dataIndex: char,
-      key: char,
-    }));
-  });
-  const [showDefaultData, setShowDefaultData] = useState(true);
 
+  // 全局拖放处理
   useEffect(() => {
-    // 生成1-20行数据
-    const defaultData = Array.from({ length: 20 }, (_, i) => ({
-      key: `default-row-${i}`,
-      ...Object.fromEntries(columns.map((col) => [col.key, " "])),
-    }));
-    setTableData(defaultData);
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      handleFileDrop(e.dataTransfer?.files[0]);
+    };
+
+    document.addEventListener("dragover", handleDragOver as any);
+    document.addEventListener("dragleave", handleDragLeave as any);
+    document.addEventListener("drop", handleDrop as any);
+
+    return () => {
+      document.removeEventListener("dragover", handleDragOver as any);
+      document.removeEventListener("dragleave", handleDragLeave as any);
+      document.removeEventListener("drop", handleDrop as any);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 处理文件拖放
-  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragActive(false);
-
-    const file = e.dataTransfer.files[0];
+  const handleFileDrop = async (file?: File) => {
     if (!file?.name.match(/\.(xls|xlsx)$/)) {
       message.error("仅支持Excel文件");
       return;
@@ -46,31 +50,11 @@ const DataUpload: FC = () => {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const wb = read(data);
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const jsonData: Record<string, unknown>[] = utils.sheet_to_json(ws, { raw: false });
-
-        // 动态生成列
-        const dynamicColumns: ColumnType[] = [];
-        if (jsonData.length > 0) {
-          Object.keys(jsonData[0]).forEach((key) => {
-            dynamicColumns.push({
-              title: key,
-              dataIndex: key,
-              key: key,
-              width: 150,
-            });
-          });
-        }
-        setColumns(dynamicColumns);
-
-        // 生成带唯一key的数据
-        const processedData = jsonData.map((item, index) => ({
-          ...item,
-          key: `row-${index}-${Date.now()}`,
-        }));
-        setTableData(processedData);
-        setShowDefaultData(false);
+        const worksheet = utils.sheet_to_json(ws, { header: 1 });
+        const twoDArray = worksheet as any[][];
+        setTableData(twoDArray);
       } catch (error) {
-        message.error("文件解析失败");
+        message.error(`文件解析失败: ${(error as Error).message}`);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -78,19 +62,12 @@ const DataUpload: FC = () => {
 
   return (
     <div
-      className={`excel-table ${dragActive ? "drag-active" : ""}`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragActive(true);
+      className={`fullscreen-dropzone`}
+      style={{
+        height: "100%",
       }}
-      onDragLeave={() => setDragActive(false)}
-      onDrop={handleDrop}
     >
-      <DataTable
-        columns={columns}
-        rows={tableData}
-        showDefaultData={showDefaultData}
-      />
+      <DataTable data={tableData} />
     </div>
   );
 };

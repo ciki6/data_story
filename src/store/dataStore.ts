@@ -2,12 +2,11 @@ import { create } from "zustand";
 
 interface DataState {
   currentTab: string;
-  tableData: Record<string, unknown>[];
-  chartType: "line" | "bar";
+  tableData: any[][];
+  chartType: string;
   setTab: (tab: string) => void;
-  setTableData: (data: Record<string, unknown>[]) => void;
-  setChartType: (type: "line" | "bar") => void;
-  // updateConfig: (config: Partial<{ width: number; height: number }>) => void;
+  setTableData: (data: any[][]) => void;
+  setChartType: (type: string) => void;
 }
 
 export const useDataStore = create<DataState>((set) => ({
