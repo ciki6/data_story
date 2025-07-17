@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import type { FC } from "react";
 import { message } from "antd";
 import DataTable from "./DataTable";
-import DataConfigPanel from "./DataConfigPanel";
+import DataConfigPanel from "./DataBinding";
 
 const DataUpload: FC = () => {
   const setTableData = useDataStore((state) => state.setTableData);

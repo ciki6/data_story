@@ -1,6 +1,5 @@
 // import Handsontable from "handsontable";
 import { HotTable } from "@handsontable/react";
-import Handsontable from "handsontable";
 import "handsontable/styles/handsontable.css";
 import "handsontable/styles/ht-theme-main.css";
 
@@ -49,20 +48,6 @@ const DataTable: FC<DataTableProps> = ({ data }) => {
         search={true}
         selectionMode="range"
         renderAllRows={false}
-      // contextMenu={true}
-      // manualRowMove={true}
-      // manualColumnMove={true}
-      // autoWrapRow={true}
-      // multiColumnSorting={true}
-      // filters={true}
-      // dropdownMenu={true}
-      // afterRender={console.log}
-      // beforeRenderer={(TD) => {
-      //   TD.style.whiteSpace = "nowrap";
-      //   TD.style.textOverflow = "ellipsis";
-      // }}
-      // viewportRowRenderingOffset="auto"
-      // renderAllRows={false}
       />
     </div>
   );
