@@ -1,5 +1,5 @@
 import { create } from "zustand";
-
+import Handsontable from "handsontable";
 interface DataState {
   currentTab: string;
   tableData: any[][];
@@ -11,7 +11,7 @@ interface DataState {
 
 export const useDataStore = create<DataState>((set) => ({
   currentTab: "upload",
-  tableData: [],
+  tableData: Handsontable.helper.createEmptySpreadsheetData(6, 10),
   chartType: "line",
 
   setTab: (tab) => set({ currentTab: tab }),

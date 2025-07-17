@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { FC } from "react";
 import { message } from "antd";
 import DataTable from "./DataTable";
+import DataConfigPanel from "./DataConfigPanel";
 
 const DataUpload: FC = () => {
   const setTableData = useDataStore((state) => state.setTableData);
@@ -14,32 +15,27 @@ const DataUpload: FC = () => {
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      e.dataTransfer && (e.dataTransfer.dropEffect = 'copy');
     };
 
-    const handleDragLeave = (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
 
     const handleDrop = async (e: DragEvent) => {
       e.preventDefault();
-      handleFileDrop(e.dataTransfer?.files[0]);
+      handleFileDrop(e.dataTransfer?.files?.[0]);
     };
 
     document.addEventListener("dragover", handleDragOver as any);
-    document.addEventListener("dragleave", handleDragLeave as any);
     document.addEventListener("drop", handleDrop as any);
 
     return () => {
       document.removeEventListener("dragover", handleDragOver as any);
-      document.removeEventListener("dragleave", handleDragLeave as any);
       document.removeEventListener("drop", handleDrop as any);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFileDrop = async (file?: File) => {
-    if (!file?.name.match(/\.(xls|xlsx)$/)) {
+    if (!file?.name.match(/\.(xls|xlsx)$/i)) {
       message.error("仅支持Excel文件");
       return;
     }
@@ -62,12 +58,27 @@ const DataUpload: FC = () => {
 
   return (
     <div
-      className={`fullscreen-dropzone`}
       style={{
-        height: "100%",
+        display: 'flex',
+        height: '100%',
+        gap: 16,
+        padding: 16
       }}
     >
-      <DataTable data={tableData} />
+      <div style={{
+        width: '70%',
+        height: '100%',
+      }}>
+        <DataTable data={tableData} />
+      </div>
+      <div style={{
+        width: '30%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16
+      }}>
+        <DataConfigPanel />
+      </div>
     </div>
   );
 };
